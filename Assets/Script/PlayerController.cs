@@ -19,9 +19,13 @@ public class PlayerController : MonoBehaviour
     [Header("Jump SFX")]
     [SerializeField] private AudioClip jumpClip;
 
+    [Header("Punch")]
+    [SerializeField] private float punchDistance = 2f;
+
     private Rigidbody rb;
     private Animator anim;
     private AudioSource audioSource;
+    private PlayerKnockback playerKnockback;
     private bool isGrounded;
 
     private void Start()
@@ -31,6 +35,7 @@ public class PlayerController : MonoBehaviour
 
         anim = GetComponentInChildren<Animator>();
         audioSource = GetComponent<AudioSource>();
+        playerKnockback = GetComponent<PlayerKnockback>();
 
         if (anim == null)
             Debug.LogError("Animator? ?? ? ??!");
@@ -56,7 +61,8 @@ public class PlayerController : MonoBehaviour
             ? transform.forward * v * moveSpeed
             : new Vector3(h, 0f, v) * moveSpeed;
 
-        rb.velocity = new Vector3(moveXZ.x, rb.velocity.y, moveXZ.z);
+        if (playerKnockback == null || !playerKnockback.IsKnockedBack)
+            rb.velocity = new Vector3(moveXZ.x, rb.velocity.y, moveXZ.z);
 
         if (isGrounded && Input.GetKeyDown(KeyCode.Space))
         {
@@ -71,6 +77,39 @@ public class PlayerController : MonoBehaviour
             anim.SetBool("Run", isMoving);
 
         if (Input.GetKeyDown(KeyCode.Mouse1)) // 마우스 우클릭
-            anim.SetTrigger("Punch");
+        {
+            if (anim != null)
+                anim.SetTrigger("Punch");
+            TryPunch();
+        }
+    }
+
+    private void TryPunch()
+    {
+        Vector3 origin = transform.position + Vector3.up * 1.0f;
+
+        if (!Physics.Raycast(origin, transform.forward, out RaycastHit hit, punchDistance))
+            return;
+
+        IfKillEnemyOpenDoor gatedDoor = hit.collider.GetComponent<IfKillEnemyOpenDoor>();
+        if (gatedDoor != null)
+        {
+            gatedDoor.Hit();
+            return;
+        }
+
+        BreakWall breakWall = hit.collider.GetComponent<BreakWall>();
+        if (breakWall != null)
+        {
+            breakWall.Hit();
+            return;
+        }
+
+        EnemyHealth enemyHealth = hit.collider.GetComponent<EnemyHealth>();
+        if (enemyHealth == null)
+            enemyHealth = hit.collider.GetComponentInParent<EnemyHealth>();
+
+        if (enemyHealth != null)
+            enemyHealth.Hit();
     }
 }
