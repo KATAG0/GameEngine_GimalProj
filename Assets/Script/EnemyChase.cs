@@ -1,13 +1,19 @@
 using UnityEngine;
 
 /// <summary>
-/// 플레이어가 인식 범위 안에 들어오면 따라갑니다.
-/// Enemy 오브젝트에 붙이고, Player 오브젝트에는 Tag "Player"를 지정하세요.
+/// BreakWall이 부서진 뒤에만 플레이어를 탐지·추적합니다.
+/// Enemy 오브젝트에 붙이고, Player에는 Tag "Player"를 지정하세요.
 /// </summary>
 public class EnemyChase : MonoBehaviour
 {
+    [Header("Gate")]
+    [Tooltip("체크 시 BreakWall이 파괴될 때까지 추적하지 않음")]
+    [SerializeField] private bool waitForBreakWall = true;
+    [Tooltip("비우면 씬에서 이름이 BreakWall인 오브젝트를 찾습니다")]
+    [SerializeField] private BreakWall breakWallGate;
+
     [Header("Detection")]
-    [SerializeField] private float detectRange = 8f;
+    [SerializeField] private float detectRange = 12f;
 
     [Header("Movement")]
     [SerializeField] private float chaseSpeed = 4f;
@@ -20,8 +26,19 @@ public class EnemyChase : MonoBehaviour
     [SerializeField] private float knockbackCooldown = 0.6f;
 
     private Transform player;
+    private bool detectionEnabled;
     private bool isChasing;
     private float knockbackCooldownTimer;
+
+    private void OnEnable()
+    {
+        BreakWall.OnBroken += OnBreakWallDestroyed;
+    }
+
+    private void OnDisable()
+    {
+        BreakWall.OnBroken -= OnBreakWallDestroyed;
+    }
 
     private void Start()
     {
@@ -30,11 +47,44 @@ public class EnemyChase : MonoBehaviour
             player = playerObj.transform;
         else
             Debug.LogError("[EnemyChase] Tag가 'Player'인 오브젝트를 찾을 수 없습니다.");
+
+        if (!waitForBreakWall)
+        {
+            detectionEnabled = true;
+            return;
+        }
+
+        if (BreakWall.HasBeenBroken)
+        {
+            detectionEnabled = true;
+            return;
+        }
+
+        if (breakWallGate == null)
+        {
+            GameObject wallObj = GameObject.Find("BreakWall");
+            if (wallObj != null)
+                breakWallGate = wallObj.GetComponent<BreakWall>();
+        }
+
+        if (breakWallGate == null)
+        {
+            Debug.LogWarning("[EnemyChase] BreakWall을 찾지 못했습니다. 추적을 바로 시작합니다.");
+            detectionEnabled = true;
+            return;
+        }
+
+        detectionEnabled = false;
+    }
+
+    private void OnBreakWallDestroyed()
+    {
+        detectionEnabled = true;
     }
 
     private void Update()
     {
-        if (player == null)
+        if (!detectionEnabled || player == null)
             return;
 
         if (knockbackCooldownTimer > 0f)
@@ -92,6 +142,9 @@ public class EnemyChase : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
+        if (!detectionEnabled && Application.isPlaying)
+            return;
+
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectRange);
     }

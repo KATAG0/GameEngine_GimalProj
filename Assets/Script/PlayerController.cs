@@ -27,6 +27,10 @@ public class PlayerController : MonoBehaviour
     private AudioSource audioSource;
     private PlayerKnockback playerKnockback;
     private bool isGrounded;
+    private int airJumpsRemaining;
+    private bool hasDoubleJumpUnlocked;
+
+    public bool HasDoubleJump => hasDoubleJumpUnlocked;
 
     private void Start()
     {
@@ -51,6 +55,9 @@ public class PlayerController : MonoBehaviour
             Vector3.down,
             groundCheckDist);
 
+        if (isGrounded)
+            airJumpsRemaining = hasDoubleJumpUnlocked ? 1 : 0;
+
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
@@ -64,12 +71,15 @@ public class PlayerController : MonoBehaviour
         if (playerKnockback == null || !playerKnockback.IsKnockedBack)
             rb.velocity = new Vector3(moveXZ.x, rb.velocity.y, moveXZ.z);
 
-        if (isGrounded && Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            rb.velocity = new Vector3(rb.velocity.x, jumpForce, rb.velocity.z);
-
-            if (audioSource != null && jumpClip != null)
-                audioSource.PlayOneShot(jumpClip);
+            if (isGrounded)
+                TryJump();
+            else if (airJumpsRemaining > 0)
+            {
+                airJumpsRemaining--;
+                TryJump();
+            }
         }
 
         bool isMoving = Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f;
@@ -82,6 +92,22 @@ public class PlayerController : MonoBehaviour
                 anim.SetTrigger("Punch");
             TryPunch();
         }
+    }
+
+    public void UnlockDoubleJump()
+    {
+        hasDoubleJumpUnlocked = true;
+
+        if (isGrounded)
+            airJumpsRemaining = 1;
+    }
+
+    private void TryJump()
+    {
+        rb.velocity = new Vector3(rb.velocity.x, jumpForce, rb.velocity.z);
+
+        if (audioSource != null && jumpClip != null)
+            audioSource.PlayOneShot(jumpClip);
     }
 
     private void TryPunch()
