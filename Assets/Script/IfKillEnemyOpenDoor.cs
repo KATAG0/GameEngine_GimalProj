@@ -2,6 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// YellowOrb(키)를 requiredKeyCount개 모은 뒤에만 Punch로 부술 수 있는 문/벽입니다.
+/// 파괴 시 dropItemPrefab(예: DoubleJumpItem)을 드롭합니다.
 /// Wall_Middle 같은 오브젝트에 붙이세요.
 /// </summary>
 public class IfKillEnemyOpenDoor : MonoBehaviour
@@ -11,6 +12,10 @@ public class IfKillEnemyOpenDoor : MonoBehaviour
 
     [Header("Break")]
     [SerializeField] private int hitPoints = 3;
+
+    [Header("Drop")]
+    [SerializeField] private GameObject dropItemPrefab;
+    [SerializeField] private Vector3 dropOffset = new Vector3(0f, 0.5f, 0f);
 
     public void Hit()
     {
@@ -29,7 +34,25 @@ public class IfKillEnemyOpenDoor : MonoBehaviour
 
         hitPoints--;
         if (hitPoints <= 0)
-            Destroy(gameObject);
+            BreakApart();
+    }
+
+    private void BreakApart()
+    {
+        SpawnDropItem();
+        Destroy(gameObject);
+    }
+
+    private void SpawnDropItem()
+    {
+        if (dropItemPrefab == null)
+        {
+            Debug.LogWarning("[IfKillEnemyOpenDoor] dropItemPrefab이 할당되지 않았습니다.");
+            return;
+        }
+
+        Vector3 spawnPos = transform.position + dropOffset;
+        Instantiate(dropItemPrefab, spawnPos, Quaternion.identity);
     }
 
     private static PlayerOrbInventory FindPlayerInventory()

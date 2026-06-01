@@ -8,15 +8,28 @@ public class YellowOrb : MonoBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
+        Debug.Log($"[YellowOrb] Trigger 진입: {other.name} (tag={other.tag})");
+
         if (!other.CompareTag("Player"))
+        {
+            Debug.Log($"[YellowOrb] Player 태그 아님 → 수집 안 함");
             return;
+        }
 
         PlayerOrbInventory inventory = other.GetComponent<PlayerOrbInventory>();
         if (inventory == null)
             inventory = other.GetComponentInParent<PlayerOrbInventory>();
 
-        if (inventory != null)
-            inventory.CollectOrb();
+        if (inventory == null)
+        {
+            Debug.LogWarning("[YellowOrb] Player에 PlayerOrbInventory 없음 → 키는 사라지지만 개수는 안 올라감");
+            Destroy(gameObject);
+            return;
+        }
+
+        Debug.Log($"[YellowOrb] 키 수집 시도 (현재 보유: {inventory.OrbCount})");
+        inventory.CollectOrb();
+        Debug.Log($"[YellowOrb] 수집 완료 후 보유: {inventory.OrbCount}");
 
         Destroy(gameObject);
     }

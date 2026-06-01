@@ -13,10 +13,15 @@ public class PlayerOrbInventory : MonoBehaviour
 
     public void CollectOrb()
     {
+        Debug.Log($"[PlayerOrbInventory] CollectOrb 호출됨 (수집 전: {orbCount} / {maxOrbCount})");
+
         if (orbCount >= maxOrbCount)
+        {
+            Debug.Log($"[PlayerOrbInventory] 이미 최대({maxOrbCount}) → 추가 수집 무시");
             return;
+        }
 
         orbCount++;
-        Debug.Log($"[PlayerOrbInventory] YellowOrb 수집: {orbCount} / {maxOrbCount}");
+        Debug.Log($"[PlayerOrbInventory] ★ 키 수집 성공! 현재: {orbCount} / {maxOrbCount}");
     }
 }

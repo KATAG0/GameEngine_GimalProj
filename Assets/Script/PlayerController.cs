@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -21,6 +22,12 @@ public class PlayerController : MonoBehaviour
 
     [Header("Punch")]
     [SerializeField] private float punchDistance = 2f;
+    [SerializeField] private float punchHitDelay = 0.2f;
+    [SerializeField] private string punchAnimStateName = "Punching";
+
+    [Header("Punch SFX")]
+    [SerializeField] private AudioClip punchClip1;
+    [SerializeField] private AudioClip punchClip2;
 
     private Rigidbody rb;
     private Animator anim;
@@ -29,6 +36,8 @@ public class PlayerController : MonoBehaviour
     private bool isGrounded;
     private int airJumpsRemaining;
     private bool hasDoubleJumpUnlocked;
+    private bool isPunching;
+    private bool usePunchClip1 = true;
 
     public bool HasDoubleJump => hasDoubleJumpUnlocked;
 
@@ -39,6 +48,14 @@ public class PlayerController : MonoBehaviour
 
         anim = GetComponentInChildren<Animator>();
         audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = GetComponentInChildren<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0f;
+        }
         playerKnockback = GetComponent<PlayerKnockback>();
 
         if (anim == null)
@@ -50,10 +67,7 @@ public class PlayerController : MonoBehaviour
         if (anim != null)
             anim.SetBool("Jump", !isGrounded);
 
-        isGrounded = Physics.Raycast(
-            transform.position + Vector3.up * 0.1f,
-            Vector3.down,
-            groundCheckDist);
+        isGrounded = IsGrounded();
 
         if (isGrounded)
             airJumpsRemaining = hasDoubleJumpUnlocked ? 1 : 0;
@@ -88,9 +102,13 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Mouse1)) // 마우스 우클릭
         {
+            if (isPunching || !isGrounded)
+                return;
+
             if (anim != null)
                 anim.SetTrigger("Punch");
-            TryPunch();
+
+            StartCoroutine(PunchHitRoutine());
         }
     }
 
@@ -108,6 +126,77 @@ public class PlayerController : MonoBehaviour
 
         if (audioSource != null && jumpClip != null)
             audioSource.PlayOneShot(jumpClip);
+    }
+
+    private void PlayPunchSfx()
+    {
+        AudioClip clip = usePunchClip1 ? punchClip1 : punchClip2;
+        usePunchClip1 = !usePunchClip1;
+
+        if (clip == null)
+        {
+            Debug.LogWarning("[PlayerController] Punch Clip이 할당되지 않았습니다.");
+            return;
+        }
+
+        if (audioSource != null)
+            audioSource.PlayOneShot(clip);
+        else
+            AudioSource.PlayClipAtPoint(clip, transform.position);
+    }
+
+    private IEnumerator PunchHitRoutine()
+    {
+        isPunching = true;
+        yield return new WaitForSeconds(punchHitDelay);
+
+        if (IsGrounded())
+        {
+            PlayPunchSfx();
+            TryPunch();
+        }
+
+        yield return WaitUntilPunchAnimationFinished();
+        isPunching = false;
+    }
+
+    private IEnumerator WaitUntilPunchAnimationFinished()
+    {
+        if (anim == null)
+        {
+            yield return new WaitForSeconds(0.3f);
+            yield break;
+        }
+
+        int punchHash = Animator.StringToHash(punchAnimStateName);
+        const float enterTimeout = 0.5f;
+        float elapsed = 0f;
+
+        while (!IsInPunchAnimation(punchHash) && elapsed < enterTimeout)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!IsInPunchAnimation(punchHash))
+            yield break;
+
+        while (IsInPunchAnimation(punchHash))
+            yield return null;
+    }
+
+    private bool IsInPunchAnimation(int punchHash)
+    {
+        AnimatorStateInfo state = anim.GetCurrentAnimatorStateInfo(0);
+        return state.shortNameHash == punchHash;
+    }
+
+    private bool IsGrounded()
+    {
+        return Physics.Raycast(
+            transform.position + Vector3.up * 0.1f,
+            Vector3.down,
+            groundCheckDist);
     }
 
     private void TryPunch()
