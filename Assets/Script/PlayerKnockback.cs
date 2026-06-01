@@ -33,13 +33,16 @@ public class PlayerKnockback : MonoBehaviour
             reKnockbackCooldownTimer -= Time.deltaTime;
     }
 
-    public void ApplyKnockback(Vector3 direction, float force, float upForce)
+    /// <summary>
+    /// 넉백을 적용합니다. 쿨다운 때문에 실제로 밀려나면 true, 무시되면 false를 반환합니다.
+    /// </summary>
+    public bool ApplyKnockback(Vector3 direction, float force, float upForce)
     {
         if (rb == null)
-            return;
+            return false;
 
         if (!CanReceiveKnockback)
-            return;
+            return false;
 
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.0001f)
@@ -53,5 +56,6 @@ public class PlayerKnockback : MonoBehaviour
 
         knockbackTimer = knockbackDuration;
         reKnockbackCooldownTimer = reKnockbackCooldown;
+        return true;
     }
 }

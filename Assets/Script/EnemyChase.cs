@@ -25,6 +25,9 @@ public class EnemyChase : MonoBehaviour
     [SerializeField] private float knockbackHitDistance = 1.5f;
     [SerializeField] private float knockbackCooldown = 0.6f;
 
+    [Header("Damage")]
+    [SerializeField] private int damage = 1;
+
     private Transform player;
     private bool detectionEnabled;
     private bool isChasing;
@@ -129,8 +132,21 @@ public class EnemyChase : MonoBehaviour
             return;
 
         Vector3 direction = player.position - transform.position;
-        knockback.ApplyKnockback(direction, knockbackForce, knockbackUpForce);
+        bool knockedBack = knockback.ApplyKnockback(direction, knockbackForce, knockbackUpForce);
         knockbackCooldownTimer = knockbackCooldown;
+
+        if (knockedBack)
+            DealDamageToPlayer();
+    }
+
+    private void DealDamageToPlayer()
+    {
+        PlayerHealth health = player.GetComponent<PlayerHealth>();
+        if (health == null)
+            health = player.GetComponentInParent<PlayerHealth>();
+
+        if (health != null)
+            health.TakeDamage(damage);
     }
 
     private float GetFlatDistanceToPlayer()

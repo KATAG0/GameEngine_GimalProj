@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class EnemyCapsuleDash : MonoBehaviour
 {
@@ -16,6 +16,9 @@ public class EnemyCapsuleDash : MonoBehaviour
     [SerializeField] private float knockbackForce = 12f;
     [SerializeField] private float knockbackUpForce = 4f;
     [SerializeField] private float knockbackHitDistance = 1.6f;
+
+    [Header("Damage")]
+    [SerializeField] private int damage = 1;
 
     private Transform player;
     private State state = State.Idle;
@@ -76,8 +79,18 @@ public class EnemyCapsuleDash : MonoBehaviour
         PlayerKnockback knockback = player.GetComponent<PlayerKnockback>();
         if (knockback == null) knockback = player.GetComponentInParent<PlayerKnockback>();
         if (knockback == null) return;
-        knockback.ApplyKnockback(dashDirection, knockbackForce, knockbackUpForce);
+        bool knockedBack = knockback.ApplyKnockback(dashDirection, knockbackForce, knockbackUpForce);
         knockedBackThisDash = true;
+
+        if (knockedBack)
+        {
+            PlayerHealth health = player.GetComponent<PlayerHealth>();
+            if (health == null)
+                health = player.GetComponentInParent<PlayerHealth>();
+            if (health != null)
+                health.TakeDamage(damage);
+        }
+
         EnterCooldown();
     }
 

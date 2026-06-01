@@ -3,9 +3,10 @@ using UnityEngine;
 
 /// <summary>
 /// 보이지 않는 트리거 박스. Player가 들어오면 delaySeconds 후 목적지로 순간이동합니다.
+/// TeleportTriggerZone과 동일하지만, 순간이동 후 화면 플래시(눈뽕) 효과가 없습니다.
 /// Box Collider (Is Trigger) + 이 스크립트.
 /// </summary>
-public class TeleportTriggerZone : MonoBehaviour
+public class TeleportTriggerZoneNoFlash : MonoBehaviour
 {
     [Header("Teleport")]
     [Tooltip("이동할 위치(Transform). 비우면 아래 Teleport Position 좌표를 사용")]
@@ -16,13 +17,14 @@ public class TeleportTriggerZone : MonoBehaviour
     [SerializeField] private float delaySeconds = 0f;
 
     [Header("Behavior")]
-    [SerializeField] private bool triggerOnce = true;
+    [Tooltip("체크 시 1회만 발동. 해제하면 닿을 때마다 발동")]
+    [SerializeField] private bool triggerOnce = false;
     [Tooltip("체크 시 목적지의 회전도 맞춤")]
     [SerializeField] private bool matchDestinationRotation;
 
-    [Header("Flash After Teleport")]
-    [SerializeField] private bool useFlashAfterTeleport = true;
-    [SerializeField] private float flashDuration = 2f;
+    [Header("Damage")]
+    [Tooltip("순간이동 시 플레이어가 받는 데미지(0이면 데미지 없음)")]
+    [SerializeField] private int teleportDamage = 1;
 
     private bool used;
     private Coroutine teleportRoutine;
@@ -95,17 +97,20 @@ public class TeleportTriggerZone : MonoBehaviour
         if (matchDestinationRotation && teleportDestination != null)
             player.rotation = teleportDestination.rotation;
 
-        if (useFlashAfterTeleport)
-            PlayFlash(player);
+        ApplyTeleportDamage(player);
     }
 
-    private void PlayFlash(Transform player)
+    private void ApplyTeleportDamage(Transform player)
     {
-        ScreenFlashOverlay overlay = player.GetComponentInChildren<ScreenFlashOverlay>();
-        if (overlay == null)
-            overlay = player.gameObject.AddComponent<ScreenFlashOverlay>();
+        if (teleportDamage <= 0)
+            return;
 
-        overlay.Flash(flashDuration);
+        PlayerHealth health = player.GetComponent<PlayerHealth>();
+        if (health == null)
+            health = player.GetComponentInParent<PlayerHealth>();
+
+        if (health != null)
+            health.TakeDamage(teleportDamage);
     }
 
     private static bool IsPlayer(Collider other)
@@ -150,7 +155,7 @@ public class TeleportTriggerZone : MonoBehaviour
             ? teleportDestination.position
             : teleportPosition;
 
-        Gizmos.color = Color.magenta;
+        Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(destination, 0.5f);
         Gizmos.DrawLine(transform.position, destination);
     }
