@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 6356034037641888844}
   - component: {fileID: 1335109170532832241}
   - component: {fileID: -5636733778487235315}
-  - component: {fileID: -5484391513374197519}
+  - component: {fileID: -7289058760333143697}
   m_Layer: 0
   m_Name: Bullet
   m_TagString: Untagged
@@ -64,7 +64,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 058f7a570c936d24d9b143a44ab9d660, type: 2}
+  - {fileID: 2100000, guid: aab1ba24fba2741479d34952e713eed4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -134,7 +134,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &-5484391513374197519
+--- !u!114 &-7289058760333143697
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -147,7 +147,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 18
-  lifeTime: 6
-  shakeDuration: 0.4
+  damage: 1
+  shakeDuration: 3
   shakeMagnitude: 7
-  damage: 0
+  hitClip1: {fileID: 8300000, guid: c46b7b780df120449806e2b7307bfd63, type: 3}
+  hitClip2: {fileID: 8300000, guid: d222abab70c1d9243ac1c9b2648cd4e5, type: 3}
+  hitSoundDuration: 3
+  hitSoundVolume: 1
+  deflectSpeedMultiplier: 1.3
+  deflectedEnemyDamage: 1

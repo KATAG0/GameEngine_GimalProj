@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 플레이 제한 시간(기본 120초)을 세고 UI 텍스트로 남은 시간을 표시합니다.
@@ -18,6 +19,8 @@ public class PlayTimeLimit : MonoBehaviour
     [Header("Time Up")]
     [SerializeField] private bool stopPlayerOnTimeUp = true;
     [SerializeField] private string timeUpMessage = "시간 종료!";
+    [Tooltip("시간을 전부 썼을 때 이동할 게임오버 씬 이름")]
+    [SerializeField] private string gameOverSceneName = "Ending";
 
     private float remainingTime;
     private bool isRunning = true;
@@ -82,6 +85,9 @@ public class PlayTimeLimit : MonoBehaviour
 
         if (stopPlayerOnTimeUp && playerController != null)
             playerController.enabled = false;
+
+        EndingResult.SetGameOver();
+        SceneManager.LoadScene(gameOverSceneName);
     }
 
     public void AddTime(float seconds)

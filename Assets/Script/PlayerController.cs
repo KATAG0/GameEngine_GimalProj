@@ -38,8 +38,11 @@ public class PlayerController : MonoBehaviour
     private bool hasDoubleJumpUnlocked;
     private bool isPunching;
     private bool usePunchClip1 = true;
+    private bool hasBulletDeflectUnlocked;
 
     public bool HasDoubleJump => hasDoubleJumpUnlocked;
+    public bool HasBulletDeflect => hasBulletDeflectUnlocked;
+    public bool IsDeflecting => isPunching && hasBulletDeflectUnlocked;
 
     private void Start()
     {
@@ -100,7 +103,7 @@ public class PlayerController : MonoBehaviour
         if (anim != null)
             anim.SetBool("Run", isMoving);
 
-        if (Input.GetKeyDown(KeyCode.Mouse1)) // 마우스 우클릭
+        if (Input.GetKeyDown(KeyCode.Mouse0)) // 마우스 좌클릭
         {
             if (isPunching || !isGrounded)
                 return;
@@ -118,6 +121,12 @@ public class PlayerController : MonoBehaviour
 
         if (isGrounded)
             airJumpsRemaining = 1;
+    }
+
+    public void UnlockBulletDeflect()
+    {
+        hasBulletDeflectUnlocked = true;
+        Debug.Log("[PlayerController] 총알 반사 능력이 해금되었습니다!");
     }
 
     private void TryJump()
@@ -207,6 +216,8 @@ public class PlayerController : MonoBehaviour
             return;
 
         IfKillEnemyOpenDoor gatedDoor = hit.collider.GetComponent<IfKillEnemyOpenDoor>();
+        if (gatedDoor == null)
+            gatedDoor = hit.collider.GetComponentInParent<IfKillEnemyOpenDoor>();
         if (gatedDoor != null)
         {
             gatedDoor.Hit();
@@ -214,6 +225,8 @@ public class PlayerController : MonoBehaviour
         }
 
         BreakWall breakWall = hit.collider.GetComponent<BreakWall>();
+        if (breakWall == null)
+            breakWall = hit.collider.GetComponentInParent<BreakWall>();
         if (breakWall != null)
         {
             breakWall.Hit();

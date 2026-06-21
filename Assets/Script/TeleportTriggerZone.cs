@@ -24,6 +24,10 @@ public class TeleportTriggerZone : MonoBehaviour
     [SerializeField] private bool useFlashAfterTeleport = true;
     [SerializeField] private float flashDuration = 2f;
 
+    [Header("Heal After Teleport")]
+    [Tooltip("순간이동 완료 후 회복할 HP")]
+    [SerializeField] private int healAmountAfterTeleport = 3;
+
     private bool used;
     private Coroutine teleportRoutine;
     private Transform pendingPlayer;
@@ -97,6 +101,8 @@ public class TeleportTriggerZone : MonoBehaviour
 
         if (useFlashAfterTeleport)
             PlayFlash(player);
+
+        HealPlayerAfterTeleport(player);
     }
 
     private void PlayFlash(Transform player)
@@ -106,6 +112,19 @@ public class TeleportTriggerZone : MonoBehaviour
             overlay = player.gameObject.AddComponent<ScreenFlashOverlay>();
 
         overlay.Flash(flashDuration);
+    }
+
+    private void HealPlayerAfterTeleport(Transform player)
+    {
+        if (healAmountAfterTeleport <= 0)
+            return;
+
+        PlayerHealth health = player.GetComponent<PlayerHealth>();
+        if (health == null)
+            health = player.GetComponentInParent<PlayerHealth>();
+
+        if (health != null)
+            health.Heal(healAmountAfterTeleport);
     }
 
     private static bool IsPlayer(Collider other)

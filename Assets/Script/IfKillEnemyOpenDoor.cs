@@ -57,14 +57,20 @@ public class IfKillEnemyOpenDoor : MonoBehaviour
 
     private static PlayerOrbInventory FindPlayerInventory()
     {
-        GameObject player = GameObject.FindWithTag("Player");
-        if (player == null)
+        PlayerOrbInventory[] inventories = Object.FindObjectsOfType<PlayerOrbInventory>();
+        if (inventories.Length == 0)
             return null;
 
-        PlayerOrbInventory inventory = player.GetComponent<PlayerOrbInventory>();
-        if (inventory == null)
-            inventory = player.GetComponentInParent<PlayerOrbInventory>();
+        // 씬에 Player 태그가 Tutorial 등에도 붙어 있으면 FindWithTag가 엉뚱한 오브젝트를 잡음
+        foreach (PlayerOrbInventory inventory in inventories)
+        {
+            if (inventory.GetComponent<PlayerController>() != null)
+                return inventory;
 
-        return inventory;
+            if (inventory.GetComponentInParent<PlayerController>() != null)
+                return inventory;
+        }
+
+        return inventories[0];
     }
 }

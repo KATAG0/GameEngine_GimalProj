@@ -10,15 +10,15 @@ public class YellowOrb : MonoBehaviour
     {
         Debug.Log($"[YellowOrb] Trigger 진입: {other.name} (tag={other.tag})");
 
-        if (!other.CompareTag("Player"))
+        if (!IsPlayer(other))
         {
             Debug.Log($"[YellowOrb] Player 태그 아님 → 수집 안 함");
             return;
         }
 
-        PlayerOrbInventory inventory = other.GetComponent<PlayerOrbInventory>();
+        PlayerOrbInventory inventory = other.GetComponentInParent<PlayerOrbInventory>();
         if (inventory == null)
-            inventory = other.GetComponentInParent<PlayerOrbInventory>();
+            inventory = other.transform.root.GetComponentInChildren<PlayerOrbInventory>();
 
         if (inventory == null)
         {
@@ -32,5 +32,21 @@ public class YellowOrb : MonoBehaviour
         Debug.Log($"[YellowOrb] 수집 완료 후 보유: {inventory.OrbCount}");
 
         Destroy(gameObject);
+    }
+
+    private static bool IsPlayer(Collider other)
+    {
+        if (other.CompareTag("Player"))
+            return true;
+
+        Transform current = other.transform.parent;
+        while (current != null)
+        {
+            if (current.CompareTag("Player"))
+                return true;
+            current = current.parent;
+        }
+
+        return false;
     }
 }

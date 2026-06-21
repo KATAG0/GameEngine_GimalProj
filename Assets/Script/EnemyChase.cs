@@ -1,19 +1,20 @@
 using UnityEngine;
 
 /// <summary>
-/// BreakWall이 부서진 뒤에만 플레이어를 탐지·추적합니다.
-/// Enemy 오브젝트에 붙이고, Player에는 Tag "Player"를 지정하세요.
+/// Enemy 루트에 붙입니다.
+/// 1) requireBreakWall=true면 BreakWall 파괴 후에만 추적
+/// 2) Inspector의 Chase Target(씬의 Player)을 detectRange 안에서 추적
+/// 3) 가까우면 넉백 + 데미지
 /// </summary>
 public class EnemyChase : MonoBehaviour
 {
-    [Header("Gate")]
-    [Tooltip("체크 시 BreakWall이 파괴될 때까지 추적하지 않음")]
-    [SerializeField] private bool waitForBreakWall = true;
-    [Tooltip("비우면 씬에서 이름이 BreakWall인 오브젝트를 찾습니다")]
-    [SerializeField] private BreakWall breakWallGate;
+    [Header("Chase Target")]
+    [Tooltip("Player 프리팹 또는 씬의 Player 오브젝트를 드래그")]
+    [SerializeField] private GameObject chaseTarget;
 
     [Header("Detection")]
     [SerializeField] private float detectRange = 12f;
+    [SerializeField] private bool requireBreakWall = true;
 
     [Header("Movement")]
     [SerializeField] private float chaseSpeed = 4f;
@@ -28,86 +29,61 @@ public class EnemyChase : MonoBehaviour
     [Header("Damage")]
     [SerializeField] private int damage = 1;
 
-    private Transform player;
+    private Transform playerTarget;
     private bool detectionEnabled;
-    private bool isChasing;
     private float knockbackCooldownTimer;
 
     private void OnEnable()
     {
-        BreakWall.OnBroken += OnBreakWallDestroyed;
+        BreakWall.OnBroken += EnableDetection;
     }
 
     private void OnDisable()
     {
-        BreakWall.OnBroken -= OnBreakWallDestroyed;
+        BreakWall.OnBroken -= EnableDetection;
     }
 
     private void Start()
     {
-        GameObject playerObj = GameObject.FindWithTag("Player");
-        if (playerObj != null)
-            player = playerObj.transform;
-        else
-            Debug.LogError("[EnemyChase] Tag가 'Player'인 오브젝트를 찾을 수 없습니다.");
-
-        if (!waitForBreakWall)
-        {
-            detectionEnabled = true;
-            return;
-        }
-
-        if (BreakWall.HasBeenBroken)
-        {
-            detectionEnabled = true;
-            return;
-        }
-
-        if (breakWallGate == null)
-        {
-            GameObject wallObj = GameObject.Find("BreakWall");
-            if (wallObj != null)
-                breakWallGate = wallObj.GetComponent<BreakWall>();
-        }
-
-        if (breakWallGate == null)
-        {
-            Debug.LogWarning("[EnemyChase] BreakWall을 찾지 못했습니다. 추적을 바로 시작합니다.");
-            detectionEnabled = true;
-            return;
-        }
-
-        detectionEnabled = false;
-    }
-
-    private void OnBreakWallDestroyed()
-    {
-        detectionEnabled = true;
+        ResolveChaseTarget();
+        detectionEnabled = !requireBreakWall || BreakWall.HasBeenBroken;
     }
 
     private void Update()
     {
-        if (!detectionEnabled || player == null)
+        if (!detectionEnabled)
+            return;
+
+        if (playerTarget == null)
+            ResolveChaseTarget();
+
+        if (playerTarget == null)
             return;
 
         if (knockbackCooldownTimer > 0f)
             knockbackCooldownTimer -= Time.deltaTime;
 
-        float distance = GetFlatDistanceToPlayer();
-
-        if (distance <= detectRange)
-            isChasing = true;
-        else
-            isChasing = false;
-
-        if (isChasing)
-            TryKnockbackPlayer(distance);
-
-        if (!isChasing || distance <= stopDistance)
+        float distance = GetFlatDistanceToTarget();
+        if (distance > detectRange)
             return;
 
-        Vector3 direction = player.position - transform.position;
+        TryKnockbackPlayer(distance);
+
+        if (distance > stopDistance)
+            MoveToTarget();
+    }
+
+    private void EnableDetection()
+    {
+        detectionEnabled = true;
+        Debug.Log("[EnemyChase] BreakWall 파괴 → 추적 활성화");
+    }
+
+    private void MoveToTarget()
+    {
+        Vector3 direction = playerTarget.position - transform.position;
         direction.y = 0f;
+
         if (direction.sqrMagnitude < 0.0001f)
             return;
 
@@ -124,14 +100,11 @@ public class EnemyChase : MonoBehaviour
         if (distance > knockbackHitDistance)
             return;
 
-        PlayerKnockback knockback = player.GetComponent<PlayerKnockback>();
-        if (knockback == null)
-            knockback = player.GetComponentInParent<PlayerKnockback>();
-
+        PlayerKnockback knockback = playerTarget.GetComponentInParent<PlayerKnockback>();
         if (knockback == null)
             return;
 
-        Vector3 direction = player.position - transform.position;
+        Vector3 direction = playerTarget.position - transform.position;
         bool knockedBack = knockback.ApplyKnockback(direction, knockbackForce, knockbackUpForce);
         knockbackCooldownTimer = knockbackCooldown;
 
@@ -141,27 +114,67 @@ public class EnemyChase : MonoBehaviour
 
     private void DealDamageToPlayer()
     {
-        PlayerHealth health = player.GetComponent<PlayerHealth>();
-        if (health == null)
-            health = player.GetComponentInParent<PlayerHealth>();
-
+        PlayerHealth health = playerTarget.GetComponentInParent<PlayerHealth>();
         if (health != null)
             health.TakeDamage(damage);
     }
 
-    private float GetFlatDistanceToPlayer()
+    private float GetFlatDistanceToTarget()
     {
         return Vector3.Distance(
             new Vector3(transform.position.x, 0f, transform.position.z),
-            new Vector3(player.position.x, 0f, player.position.z));
+            new Vector3(playerTarget.position.x, 0f, playerTarget.position.z));
+    }
+
+    private void ResolveChaseTarget()
+    {
+        if (chaseTarget == null)
+        {
+            playerTarget = null;
+            Debug.LogError("[EnemyChase] Chase Target이 비어 있습니다. Player 프리팹/오브젝트를 Inspector에 할당하세요.", this);
+            return;
+        }
+
+        // 씬에 올라간 Player 인스턴스를 직접 넣은 경우
+        if (chaseTarget.scene.IsValid())
+        {
+            playerTarget = chaseTarget.transform;
+            return;
+        }
+
+        // Project 창의 Player 프리팹을 넣은 경우 → 씬에서 같은 이름의 활성 오브젝트 탐색
+        GameObject sceneInstance = GameObject.Find(chaseTarget.name);
+        if (sceneInstance != null)
+        {
+            playerTarget = sceneInstance.transform;
+            return;
+        }
+
+        playerTarget = null;
+        Debug.LogError($"[EnemyChase] 씬에서 Player 인스턴스('{chaseTarget.name}')를 찾지 못했습니다.", this);
+    }
+
+    private void OnDrawGizmos()
+    {
+        DrawDetectRangeGizmo(0.35f);
     }
 
     private void OnDrawGizmosSelected()
     {
-        if (!detectionEnabled && Application.isPlaying)
-            return;
+        DrawDetectRangeGizmo(1f);
+    }
 
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, detectRange);
+    private void DrawDetectRangeGizmo(float alpha)
+    {
+        float radius = Mathf.Max(detectRange, 1f);
+
+        if (!Application.isPlaying)
+            Gizmos.color = new Color(1f, 1f, 0f, alpha);
+        else if (detectionEnabled)
+            Gizmos.color = new Color(1f, 1f, 0f, alpha);
+        else
+            Gizmos.color = new Color(0.6f, 0.6f, 0.6f, alpha);
+
+        Gizmos.DrawWireSphere(transform.position, radius);
     }
 }
